@@ -1,0 +1,129 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<meta charset="utf-8">
+<style>
+
+body {
+  font: 10px sans-serif;
+}
+
+.bar rect {
+  fill: steelblue;
+  shape-rendering: crispEdges;
+}
+
+.bar text {
+  fill: #fff;
+}
+
+.axis path, .axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+</style>
+
+<body>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script type="text/javascript" src="http://code.jquery.com/jquery.min.js"></script>
+<script>
+// A formatter for counts.
+var formatCount = d3.format(",.0f");
+
+var margin = {top: 10, right: 30, bottom: 30, left: 30},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+
+// histogram
+var bars = d3.layout.pack();
+
+var width = 960;
+var height = 400;
+
+// import json
+d3.json('flare.json',function(error, root){
+	var data = bars.nodes(classes(root))
+      .filter(function(d) { return !d.children; });
+	var n_bins = 100;
+	var n_bins = data.length;
+// 	var n_bins = 20;
+	console.log(data[1].value);
+	
+	var values = [];
+	for(i = 0; i<data.length;i++){
+		values[i] = data[i].value;
+	}
+	console.log(d3.max(values));
+	
+	var x = d3.scale.linear()
+    .domain([0, d3.max(values)])
+    .range([0, width]);
+	
+	// Generate a histogram using twenty uniformly-spaced bins.
+	var hist = d3.layout.histogram()
+    .bins(x.ticks(n_bins))
+    (values);
+	
+	console.log(hist)
+	
+	var y = d3.scale.linear()
+    .domain([0, d3.max(hist, function(d) { return d.y; })])
+    .range([height, 0]);
+	
+	var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+	
+	var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  	.append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+	
+	var bar = svg.selectAll(".bar")
+		.data(hist)
+		.enter().append("g")
+		.attr("class","bar")
+		.attr("transform", function(d){
+			return "translate(" +x(d.x)+","+y(d.y)+")";							
+		})
+		
+	bar.append("rect")
+    .attr("x", 1)
+    .attr("width", x(hist[0].dx) - 1)
+    .attr("height", function(d) { return height - y(d.y); });
+
+	bar.append("text")
+    .attr("dy", ".75em")
+    .attr("y", 6)
+    .attr("x", x(hist[0].dx) / 2)
+    .attr("text-anchor", "middle")
+    .text(function(d) { return formatCount(d.y); });
+
+	svg.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(xAxis);
+	
+	
+})
+
+// Returns a flattened hierarchy containing all leaf nodes under the root.
+function classes(root) {
+  var classes = [];
+
+  function recurse(name, node) {
+    if (node.children) node.children.forEach(function(child) { recurse(node.name, child); });
+    else classes.push({packageName: name, className: node.name, value: node.size});
+  }
+
+  recurse(null, root);
+  return {children: classes};
+}
+</script>
+
+
+</body>
+</html>
